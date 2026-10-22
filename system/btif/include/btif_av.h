@@ -407,7 +407,7 @@ uint16_t btif_av_get_aptx_mode_info();
 /*
  * Updates the AptX Mode
  */
-void btif_av_update_aptx_mode_info();
+void btif_av_update_aptx_mode_info(uint16_t aptx_mode);
 
 /**
  * Initiate an AV connection after 3s timeout to peer audio sink

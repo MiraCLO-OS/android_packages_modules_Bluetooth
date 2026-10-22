@@ -120,6 +120,8 @@ public class A2dpService extends ConnectableProfile {
 
     private static final int APTX_HQ = 0x1000;
     private static final int APTX_LL = 0x2000;
+    private static final int APTX_ULL_S = 0x4000;
+    private static final int APTX_ULL = 0x5000;
     private static final long APTX_MODE_MASK = 0x7000;
     private static final long APTX_SCAN_FILTER_MASK = 0x8000;
 
@@ -767,6 +769,7 @@ public class A2dpService extends ConnectableProfile {
         long mGamingStatus = (cs4 & GAMING_MODE_MASK);
         long mLowLatencyStatus = (cs4 & HEAD_TRACKER_AVAILABLE_MASK);
         boolean mIsScanEnabled = false;
+        boolean updateScanMode = true;
 
         if (cs4 > 0 && codecConfig.getCodecType() ==
                                 BluetoothCodecConfig.SOURCE_CODEC_TYPE_APTX_ADAPTIVE) {
@@ -782,12 +785,21 @@ public class A2dpService extends ConnectableProfile {
                         mIsScanEnabled = false;
                     }
                 }
+                case APTX_ULL_S, APTX_ULL -> {
+                    // ULL feedback is valid; scan filtering applies only to LL.
+                    mIsScanEnabled = false;
+                }
                 default -> {
-                    Log.e(TAG, cs4 + " is not a aptX profile mode feedback");
+                    // CS4 may be updated in pieces; absent/unknown mode bits aren't feedback.
+                    updateScanMode = false;
+                    Log.d(TAG, "Ignoring aptX feedback without a recognized mode: cs4=0x"
+                            + Long.toHexString(cs4));
                 }
             }
-            getAdapterService().getBluetoothScanController()
-                           .setAptXLowLatencyMode(mIsScanEnabled);
+            if (updateScanMode) {
+                getAdapterService().getBluetoothScanController()
+                               .setAptXLowLatencyMode(mIsScanEnabled);
+            }
 
             if (mAlsDisabled) {
                 Log.e(TAG, "setCodecConfigPreference: ALS trigger is ignored");

@@ -603,11 +603,20 @@ public:
         if (cp.codec_specific_4 > 0) {
           cs4 = cp.codec_specific_4;
           BTA_AvUpdateAptxData(cs4);
-          uint16_t aptx_mode = (uint16_t)(cs4 & APTX_MODE_MASK);
-          bool is_gaming = (aptx_mode == APTX_LL) ? true : false;
-          SetGamingMode(is_gaming);
-          btif_av_update_codec_mode();
-          log::info("Update AptX AD codec mode");
+          const uint16_t aptx_mode = static_cast<uint16_t>(cs4 & APTX_MODE_MASK);
+          if (aptx_mode == APTX_HQ || aptx_mode == APTX_LL ||
+              aptx_mode == APTX_ULL_S || aptx_mode == APTX_ULL) {
+            const bool is_gaming = (aptx_mode == APTX_LL);
+            SetGamingMode(is_gaming);
+            btif_av_update_aptx_mode_info(aptx_mode);
+            btif_av_update_codec_mode();
+            log::info("Update AptX AD codec mode: mode=0x{:x}, gaming={}", aptx_mode,
+                      is_gaming);
+          } else {
+            // CS4 can arrive in partial updates; don't treat missing mode bits as HQ.
+            log::warn("Ignoring unknown aptX mode feedback: cs4=0x{:x}, mode=0x{:x}", cs4,
+                      aptx_mode);
+          }
         }
         if ((codec_config.codec_type == cp.codec_type) &&
             (codec_config.sample_rate == cp.sample_rate) &&
@@ -4568,18 +4577,26 @@ uint16_t btif_av_get_aptx_mode_info() {
   return aptx_mode;
 }
 
-void btif_av_update_aptx_mode_info() {
-  bool is_low_latency_mode =
-          btif_av_source.GetGamingMode() || btif_av_source.GetSpatialAudioLLMode();
-  log::info("btif_av_update_aptx_mode_info: is low latency {}", is_low_latency_mode);
+void btif_av_update_aptx_mode_info(uint16_t aptx_mode) {
+  uint16_t new_aptx_mode = aptx_mode & APTX_MODE_MASK;
+  // aptxals encodes its High Quality + 16-bit-source profile as 0x5000.
+  // The audio HAL mode field should contain the base High Quality mode;
+  // BTA_AvUpdateAptxData() separately handles the 16-bit-source flag.
+  if (new_aptx_mode == APTX_ULL) {
+    new_aptx_mode = APTX_HQ;
+  }
+  if (new_aptx_mode != APTX_HQ && new_aptx_mode != APTX_LL &&
+      new_aptx_mode != APTX_ULL_S) {
+    log::warn("Ignoring unsupported aptX mode {}", new_aptx_mode);
+    return;
+  }
   uint16_t old_aptx_mode = btif_av_get_aptx_mode_info();
-  uint16_t new_aptx_mode = (is_low_latency_mode) ? APTX_LL : APTX_HQ;
+  btif_av_source.SetAptxMode(new_aptx_mode);
   if (old_aptx_mode != new_aptx_mode) {
     log::info("btif_av_update_aptx_mode_info: aptx mode change from {} to {}", old_aptx_mode,
               new_aptx_mode);
     btif_a2dp_update_codec_mode();
   }
-  btif_av_source.SetAptxMode(new_aptx_mode);
 }
 
 void btif_av_connect_sink_delayed(uint8_t handle, const RawAddress& peer_address) {

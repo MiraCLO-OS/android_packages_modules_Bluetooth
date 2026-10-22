@@ -742,8 +742,8 @@ bool a2dp_get_selected_hal_codec_config(CodecConfiguration* codec_config) {
                    << ": Unknown aptX adaptive channel_mode=" << adaptive_cie.channelMode;
         return false;
       }
-      aptx_adaptive_config.aptxMode = static_cast<AptxMode>(0x1000)
-              /*static_cast<AptxMode> (btif_av_get_aptx_mode_info())*/;
+      aptx_adaptive_config.aptxMode =
+              static_cast<AptxMode>(btif_av_get_aptx_mode_info());
       aptx_adaptive_config.sinkBuffering = {20, 50, 20, 50, 20, 50};
       aptx_adaptive_config.ttp = {
               adaptive_cie.aptx_data.ttp_ll_0,  adaptive_cie.aptx_data.ttp_ll_1,
@@ -1065,8 +1065,8 @@ bool a2dp_get_selected_hal_codec_config_2_1(CodecConfiguration_2_1* codec_config
                    << ": Unknown aptX adaptive channel_mode=" << adaptive_cie.channelMode;
         return false;
       }
-      aptx_adaptive_config.aptxMode = static_cast<AptxMode>(0x1000)
-              /*static_cast<AptxMode> (btif_av_get_aptx_mode_info())*/;
+      aptx_adaptive_config.aptxMode =
+              static_cast<AptxMode>(btif_av_get_aptx_mode_info());
       aptx_adaptive_config.sinkBuffering = {20, 50, 20, 50, 20, 50};
       aptx_adaptive_config.ttp = {
               adaptive_cie.aptx_data.ttp_ll_0,  adaptive_cie.aptx_data.ttp_ll_1,
